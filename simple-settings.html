@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Settings</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #000000;
+            color: white;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(39, 39, 42, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #3f3f46;
+            backdrop-blur: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: white;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #3f3f46;
+            border-radius: 4px;
+            font-size: 14px;
+            background: rgba(39, 39, 42, 0.8);
+            color: white;
+        }
+        input:focus {
+            outline: none;
+            border-color: #9333ea;
+        }
+        button {
+            background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+        }
+        .help-text {
+            font-size: 12px;
+            color: #a1a1aa;
+            margin-top: 4px;
+        }
+        .help-text a {
+            color: #9333ea;
+            text-decoration: none;
+        }
+        .help-text a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PR MenuBar Settings</h1>
+        <form id="settingsForm">
+            <div class="form-group">
+                <label for="owner">Repository Owner</label>
+                <input 
+                    type="text" 
+                    id="owner" 
+                    placeholder="e.g., facebook"
+                    required
+                >
+                <div class="help-text">The GitHub username or organization that owns the repository</div>
+            </div>
+
+            <div class="form-group">
+                <label for="repo">Repository Name</label>
+                <input 
+                    type="text" 
+                    id="repo" 
+                    placeholder="e.g., react"
+                    required
+                >
+                <div class="help-text">The name of the repository (without the .git extension)</div>
+            </div>
+
+            <div class="form-group">
+                <label for="token">GitHub Personal Access Token</label>
+                <input 
+                    type="password" 
+                    id="token" 
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                    required
+                >
+                <div class="help-text">
+                    Your GitHub personal access token. 
+                    <a href="https://github.com/settings/tokens" target="_blank">Generate one here</a>
+                </div>
+            </div>
+            <button type="submit">Save Settings</button>
+        </form>
+    </div>
+    
+    <script>
+        try {
+            const { ipcRenderer } = require('electron');
+            
+            // Load current settings
+            ipcRenderer.invoke('get-settings').then(settings => {
+                document.getElementById('owner').value = settings.owner || '';
+                document.getElementById('repo').value = settings.repo || '';
+                document.getElementById('token').value = settings.token || '';
+            }).catch(error => {
+                console.error('Error loading settings:', error);
+            });
+            
+            // Handle form submission
+            document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const settings = {
+                    owner: document.getElementById('owner').value,
+                    repo: document.getElementById('repo').value,
+                    token: document.getElementById('token').value
+                };
+                
+                try {
+                    await ipcRenderer.invoke('save-settings', settings);
+                    alert('Settings saved successfully!');
+                } catch (error) {
+                    alert('Error saving settings: ' + error.message);
+                }
+            });
+        } catch (error) {
+            console.error('Error in settings script:', error);
+            alert('Error initializing settings: ' + error.message);
+        }
+    </script>
+</body>
+</html> 

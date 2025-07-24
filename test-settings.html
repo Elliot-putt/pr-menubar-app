@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Settings</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #000000;
+            color: white;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(39, 39, 42, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #3f3f46;
+        }
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        button {
+            background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Settings</h1>
+        <p>This is a test settings window to debug the crash issue.</p>
+        <button onclick="testIpc()">Test IPC</button>
+        <button onclick="window.close()">Close</button>
+    </div>
+    
+    <script>
+        function testIpc() {
+            try {
+                const { ipcRenderer } = require('electron');
+                console.log('IPC Renderer loaded successfully');
+                alert('IPC Renderer works!');
+            } catch (error) {
+                console.error('Error loading IPC:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html> 

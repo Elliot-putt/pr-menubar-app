@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PR MenuBar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 8px;
+            overflow: hidden;
+            color: white;
+        }
+
+        .app {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            position: relative;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-logo {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .countdown {
+            background: rgba(147, 51, 234, 0.2);
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 20px;
+            padding: 4px 12px;
+            color: #a855f7;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .countdown::before {
+            content: "⏱";
+            font-size: 10px;
+        }
+
+        .header-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            padding: 6px 10px;
+            color: white;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .refresh-btn {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(34, 197, 94, 0.3);
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+
+        .clear-filter-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .clear-filter-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .header-subtitle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #a1a1aa;
+        }
+
+        .pr-count {
+            background: rgba(147, 51, 234, 0.2);
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #a855f7;
+        }
+
+        .filter-indicator {
+            background: rgba(236, 72, 153, 0.2);
+            border: 1px solid rgba(236, 72, 153, 0.3);
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #ec4899;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .metrics {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 16px;
+            background: rgba(39, 39, 42, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-blur: 8px;
+        }
+
+        .metric-circle {
+            text-align: center;
+            position: relative;
+            transition: transform 0.2s ease;
+            width: 80px;
+            height: 80px;
+        }
+
+        .metric-circle:hover {
+            transform: translateY(-2px);
+        }
+
+        .filter-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            color: white;
+            font-size: 10px;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
+            line-height: 1;
+        }
+
+        .metric-circle:hover .filter-btn {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .filter-btn:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(147, 51, 234, 0.5);
+        }
+
+        .filter-btn.active {
+            opacity: 1;
+            background: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
+            animation: bounce 0.5s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .circle-progress {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #27272a 0%, #3f3f46 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .circle-progress::before {
+            content: '';
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            position: absolute;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-value {
+            position: relative;
+            z-index: 1;
+            font-weight: 700;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .metric-label {
+            font-size: 10px;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .pr-item {
+            background: rgba(39, 39, 42, 0.8);
+            border: 1px solid #3f3f46;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-blur: 8px;
+        }
+
+        .pr-item:hover {
+            border-color: #9333ea;
+            box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
+            background: rgba(39, 39, 42, 0.9);
+        }
+
+        .pr-title {
+            font-weight: 600;
+            color: white;
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .pr-meta {
+            font-size: 12px;
+            color: #a1a1aa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .pr-author {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pr-author img {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+
+        .pr-number {
+            color: #9333ea;
+            font-weight: 500;
+        }
+
+        .pr-status {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .status-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-failure {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-review {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #a1a1aa;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: white;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #a1a1aa;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #3f3f46;
+            border-top: 2px solid #9333ea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            text-align: center;
+            padding: 20px;
+            color: #fca5a5;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 6px;
+            margin: 16px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .build-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+        }
+
+        .build-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .build-success { background: #28a745; }
+        .build-pending { background: #ffc107; }
+        .build-failure { background: #dc3545; }
+        .build-unknown { background: #6c757d; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="app">
+            <div class="header">
+                <div class="header-top">
+                    <div class="header-left">
+                        <div class="app-logo">PR</div>
+                        <h1>MenuBar</h1>
+                    </div>
+                    
+                    <div class="header-controls">
+                        <div class="countdown" v-if="countdown > 0">{{ countdown }}s</div>
+                        <button v-if="activeFilter" class="header-btn clear-filter-btn" @click="clearFilter" title="Clear Filter">
+                            ✕ Clear
+                        </button>
+                        <button class="header-btn refresh-btn" @click="refreshPRs">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="header-subtitle">
+                    <span class="pr-count">{{ prCount }}</span>
+                    <span>{{ activeFilter ? (activeFilter === 'open' ? 'open' : 'review') : 'open' }} pull requests</span>
+                    <span v-if="activeFilter" class="filter-indicator">filtered</span>
+                </div>
+            </div>
+            
+            <div class="metrics">
+                <div class="metric-circle">
+                    <button class="filter-btn" :class="{ active: activeFilter === 'open' }" @click="toggleFilter('open')" title="Filter Open PRs">
+                        🔍
+                    </button>
+                    <div class="circle-progress" :style="openPRsStyle">
+                        <span class="metric-value">{{ openPRs }}</span>
+                    </div>
+                    <div class="metric-label">Open PRs</div>
+                </div>
+            
+                <div class="metric-circle">
+                    <button class="filter-btn" :class="{ active: activeFilter === 'review' }" @click="toggleFilter('review')" title="Filter PRs Awaiting Review">
+                        🔍
+                    </button>
+                    <div class="circle-progress" :style="reviewPRsStyle">
+                        <span class="metric-value">{{ reviewPRs }}</span>
+                    </div>
+                    <div class="metric-label">Awaiting Review</div>
+                </div>
+            </div>
+            
+            <div class="content">
+                <div v-if="loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading pull requests...</p>
+                </div>
+                
+                <div v-else-if="error" class="error">
+                    <h3>Error</h3>
+                    <p>{{ error }}</p>
+                    <p>Please check your settings and try again.</p>
+                </div>
+                
+                <div v-else-if="displayedPRs.length === 0" class="empty-state">
+                    <h3>{{ activeFilter ? 'No Filtered Pull Requests' : 'No Pull Requests' }}</h3>
+                    <p v-if="activeFilter">No pull requests match the current filter.</p>
+                    <p v-else">No open pull requests found for this repository.</p>
+                    <p>Make sure your GitHub settings are configured correctly.</p>
+                </div>
+                
+                <div v-else>
+                    <div 
+                        v-for="pr in displayedPRs" 
+                        :key="pr.id" 
+                        class="pr-item"
+                        @click="openPR(pr.html_url)"
+                    >
+                        <div class="pr-title">{{ pr.title }}</div>
+                        <div class="pr-meta">
+                            <div class="pr-author">
+                                <img :src="pr.user.avatar_url" :alt="pr.user.login">
+                                <span>{{ pr.user.login }}</span>
+                            </div>
+                            <span class="pr-number">#{{ pr.number }}</span>
+                        </div>
+                        
+                        <div class="pr-status">
+                            <div class="build-status" v-if="pr.build_status">
+                                <div :class="['build-dot', 'build-' + pr.build_status.overall_state]"></div>
+                                <span>{{ pr.build_status.overall_state }}</span>
+                            </div>
+                            
+                            <div class="status-badge status-review" v-if="pr.review_data && (pr.review_data.workflow_status === 'awaiting_review' || pr.review_data.workflow_status === 'needs_review')">
+                                {{ pr.review_data.workflow_status === 'needs_review' ? 'Needs Review' : 'Awaiting Review' }}
+                            </div>
+                            <div class="status-badge status-success" v-else-if="pr.review_data && pr.review_data.workflow_status === 'approved'">
+                                Approved
+                            </div>
+                            <div class="status-badge status-failure" v-else-if="pr.review_data && pr.review_data.workflow_status === 'changes_requested'">
+                                Changes Requested
+                            </div>
+                            <div class="status-badge status-pending" v-else-if="pr.review_data && pr.review_data.workflow_status === 'partially_approved'">
+                                Partially Approved
+                            </div>
+                            <div class="status-badge status-pending" v-else-if="pr.review_data && pr.review_data.workflow_status === 'review_in_progress'">
+                                Review in Progress
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="renderer.js"></script>
+    <script>
+        // Simple scroll prevention
+        window.addEventListener('load', function() {
+            window.scrollTo(0, 0);
+        });
+        
+        // Prevent scroll restoration
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+    </script>
+</body>
+</html>

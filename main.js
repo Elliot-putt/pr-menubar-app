@@ -633,3 +633,14 @@ ipcMain.handle('open-settings', () => {
     return false;
   }
 });
+
+ipcMain.handle('check-for-updates', () => {
+  try {
+    console.log('Manual update check requested...');
+    autoUpdater.checkForUpdatesAndNotify();
+    return true;
+  } catch (error) {
+    console.error('Error checking for updates:', error);
+    throw error;
+  }
+});

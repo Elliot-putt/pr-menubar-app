@@ -113,6 +113,16 @@
             </div>
             <button type="submit">Save Settings</button>
         </form>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #3f3f46;">
+        
+        <div class="form-group">
+            <label>App Updates</label>
+            <button type="button" id="checkUpdatesBtn" style="width: 100%; margin-top: 5px;">
+                🔄 Check for Updates
+            </button>
+            <div class="help-text">Check for the latest version of PR MenuBar</div>
+        </div>
     </div>
     
     <script>
@@ -143,6 +153,36 @@
                     alert('Settings saved successfully!');
                 } catch (error) {
                     alert('Error saving settings: ' + error.message);
+                }
+            });
+            
+            // Handle update check button
+            document.getElementById('checkUpdatesBtn').addEventListener('click', async () => {
+                const btn = document.getElementById('checkUpdatesBtn');
+                const originalText = btn.innerHTML;
+                
+                console.log('Update button clicked!');
+                
+                try {
+                    btn.innerHTML = '🔄 Checking...';
+                    btn.disabled = true;
+                    
+                    console.log('Calling ipcRenderer.invoke("check-for-updates")...');
+                    const result = await ipcRenderer.invoke('check-for-updates');
+                    console.log('Update check result:', result);
+                    
+                    btn.innerHTML = '✅ Check Complete';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error checking for updates:', error);
+                    btn.innerHTML = '❌ Check Failed';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, 2000);
                 }
             });
         } catch (error) {

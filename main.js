@@ -1,4 +1,5 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, Notification, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, Notification, shell, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const axios = require('axios');
 const Store = require('electron-store');
@@ -9,11 +10,9 @@ let tray = null;
 let mainWindow = null;
 let pollInterval = null;
 
-// GitHub API configuration
 const GITHUB_API_BASE = 'https://api.github.com';
-const POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const POLL_INTERVAL = 5 * 60 * 1000;
 
-// Default settings
 const defaultSettings = {
   owner: '',
   repo: '',
@@ -21,9 +20,88 @@ const defaultSettings = {
   lastPrCount: 0
 };
 
-// Initialize settings
 if (!store.get('settings')) {
   store.set('settings', defaultSettings);
+}
+
+function setupAutoUpdater() {
+  console.log('Setting up auto-updater...');
+  
+  autoUpdater.autoDownload = false;
+  autoUpdater.checkForUpdatesAndNotify();
+  
+  autoUpdater.on('checking-for-update', () => {
+    console.log('Checking for update...');
+  });
+  
+  autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info.version);
+    
+    const response = dialog.showMessageBoxSync(mainWindow, {
+      type: 'info',
+      title: 'Update Available',
+      message: `A new version (${info.version}) is available!`,
+      detail: 'Would you like to download it now? The app will restart after download.',
+      buttons: ['Download Now', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    });
+    
+    if (response === 0) {
+      autoUpdater.downloadUpdate();
+      
+      new Notification({
+        title: 'PR MenuBar Update',
+        body: 'Downloading update in background...',
+        silent: false
+      }).show();
+    }
+  });
+  
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('Update not available. Current version:', info.version);
+  });
+  
+  autoUpdater.on('error', (err) => {
+    console.error('Auto-updater error:', err);
+  });
+  
+  autoUpdater.on('download-progress', (progressObj) => {
+    const percent = Math.round(progressObj.percent);
+    console.log(`Download progress: ${percent}%`);
+    
+    if (tray) {
+      tray.setToolTip(`PR MenuBar - Downloading update: ${percent}%`);
+    }
+  });
+  
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info.version);
+    
+    new Notification({
+      title: 'Update Ready',
+      body: 'Update downloaded! Click to restart and apply.',
+      silent: false
+    }).show();
+    
+    const response = dialog.showMessageBoxSync(mainWindow, {
+      type: 'info',
+      title: 'Update Ready',
+      message: 'Update has been downloaded.',
+      detail: 'The application will restart to apply the update.',
+      buttons: ['Restart Now', 'Restart Later'],
+      defaultId: 0,
+      cancelId: 1  
+    });
+    
+    if (response === 0) {
+      setImmediate(() => autoUpdater.quitAndInstall());
+    }
+  });
+  
+  setInterval(() => {
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 4 * 60 * 60 * 1000);
 }
 
 function createWindow() {
@@ -54,16 +132,13 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
-  // Open dev tools with Cmd+Option+I (Mac) or Ctrl+Shift+I (Windows/Linux)
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.control && input.shift && input.key === 'I') {
       mainWindow.webContents.openDevTools();
     }
   });
 
-  // Hide window when it loses focus, but with a longer delay
   mainWindow.on('blur', () => {
-    // Longer delay to prevent immediate hiding when clicking inside the window
     setTimeout(() => {
       if (!mainWindow.isDestroyed() && !mainWindow.isFocused()) {
         mainWindow.hide();
@@ -71,7 +146,6 @@ function createWindow() {
     }, 300);
   });
 
-  // Prevent window from being closed
   mainWindow.on('close', (event) => {
     if (!app.isQuiting) {
       event.preventDefault();
@@ -93,50 +167,42 @@ function createTray() {
       const size = icon.getSize();
       console.log('Custom icon loaded successfully, size:', size);
       
-      // Check if the icon loaded properly
       if (size.width === 0 || size.height === 0) {
         console.log('Custom icon is invalid, using system icon');
         icon = nativeImage.createFromNamedImage('NSImageNameStatusAvailable', [16, 16]);
       } else {
-        // Ensure the icon is properly sized for the menu bar
-        if (size.width < 16 || size.height < 16) {
-          console.log('Icon is too small, resizing...');
-          icon = icon.resize({ width: 20, height: 20 });
-        } else if (size.width > 32 || size.height > 32) {
-          console.log('Icon is too large, resizing...');
-          icon = icon.resize({ width: 20, height: 20 });
-        } else {
-          // For medium-sized icons, make them a bit bigger
-          console.log('Resizing icon to 20x20 for better visibility...');
-          icon = icon.resize({ width: 20, height: 20 });
-        }
+        console.log('Resizing icon to 20x20 for better visibility...');
+        icon = icon.resize({ width: 20, height: 20 });
       }
     } else {
       console.log('Icon file not found at:', iconPath);
-      // Use a system icon that should be more visible
       icon = nativeImage.createFromNamedImage('NSImageNameStatusAvailable', [16, 16]);
       console.log('Using system icon');
     }
   } catch (error) {
     console.log('Error loading custom icon:', error.message);
     console.log('Using fallback system icon');
-    // Try a different system icon
     icon = nativeImage.createFromNamedImage('NSImageNameStatusAvailable', [16, 16]);
   }
   
-  // Make sure the icon is visible by setting it as template image
-  icon.setTemplateImage(false); // This makes it visible instead of template
+  icon.setTemplateImage(false);
   
   tray = new Tray(icon.resize({ width: 20, height: 20 }));
-  tray.setToolTip('PR MenuBar');
+  tray.setToolTip(`PR MenuBar v${app.getVersion()}`);
   
-  // Create context menu
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'PR MenuBar',
+      label: `PR MenuBar v${app.getVersion()}`,
       enabled: false
     },
     { type: 'separator' },
+    {
+      label: 'Check for Updates',
+      click: () => {
+        console.log('Manual update check requested');
+        autoUpdater.checkForUpdatesAndNotify();
+      }
+    },
     {
       label: 'Settings',
       click: () => {
@@ -155,7 +221,6 @@ function createTray() {
 
   tray.setContextMenu(contextMenu);
 
-  // Show window when tray icon is clicked
   tray.on('click', () => {
     toggleWindow();
   });
@@ -175,27 +240,21 @@ function showWindow() {
   const trayBounds = tray.getBounds();
   const windowBounds = mainWindow.getBounds();
   
-  // Position window below the tray icon
   const x = Math.round(trayBounds.x + (trayBounds.width / 2) - (windowBounds.width / 2));
   const y = Math.round(trayBounds.y + trayBounds.height + 4);
   
-  // Get screen bounds
   const screen = require('electron').screen.getPrimaryDisplay();
   const screenBounds = screen.workAreaSize;
   
-  // Ensure window stays within screen bounds
   const adjustedX = Math.max(0, Math.min(x, screenBounds.width - windowBounds.width));
   const adjustedY = Math.max(0, Math.min(y, screenBounds.height - windowBounds.height));
   
-  // Set position and show
   mainWindow.setPosition(adjustedX, adjustedY, false);
   mainWindow.show();
   
-  // Keep window on top and focused
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.focus();
   
-  // Ensure it stays on top
   setTimeout(() => {
     if (!mainWindow.isDestroyed()) {
       mainWindow.setAlwaysOnTop(true, 'screen-saver');
@@ -254,7 +313,6 @@ async function fetchPRs() {
   }
 
   try {
-    // First get basic PR list
     const response = await axios.get(
       `${GITHUB_API_BASE}/repos/${settings.owner}/${settings.repo}/pulls?state=open`,
       {
@@ -267,13 +325,9 @@ async function fetchPRs() {
 
     const prs = response.data;
     
-    // Enhance each PR with additional data
     const enhancedPRs = await Promise.all(prs.map(async (pr) => {
       try {
-        // Get build status
         const buildStatus = await getBuildStatus(settings, pr.number);
-        
-        // Get review data
         const reviewData = await getReviewData(settings, pr.number);
         
         return {
@@ -296,7 +350,6 @@ async function fetchPRs() {
 
 async function getBuildStatus(settings, prNumber) {
   try {
-    // First get the PR details to get the head SHA
     const prResponse = await axios.get(
       `${GITHUB_API_BASE}/repos/${settings.owner}/${settings.repo}/pulls/${prNumber}`,
       {
@@ -310,7 +363,6 @@ async function getBuildStatus(settings, prNumber) {
     const pr = prResponse.data;
     const headSha = pr.head.sha;
 
-    // Now get the status for the head commit
     const statusResponse = await axios.get(
       `${GITHUB_API_BASE}/repos/${settings.owner}/${settings.repo}/commits/${headSha}/status`,
       {
@@ -345,7 +397,6 @@ async function getBuildStatus(settings, prNumber) {
 
 async function getReviewData(settings, prNumber) {
   try {
-    // Get reviews
     const reviewsResponse = await axios.get(
       `${GITHUB_API_BASE}/repos/${settings.owner}/${settings.repo}/pulls/${prNumber}/reviews`,
       {
@@ -356,7 +407,6 @@ async function getReviewData(settings, prNumber) {
       }
     );
 
-    // Get requested reviewers
     const reviewersResponse = await axios.get(
       `${GITHUB_API_BASE}/repos/${settings.owner}/${settings.repo}/pulls/${prNumber}/requested_reviewers`,
       {
@@ -370,7 +420,6 @@ async function getReviewData(settings, prNumber) {
     const reviews = reviewsResponse.data;
     const requestedReviewers = reviewersResponse.data.users || [];
     
-    // Analyze review workflow
     const workflowStatus = analyzeReviewWorkflow(reviews, requestedReviewers);
     
     return {
@@ -391,7 +440,6 @@ async function getReviewData(settings, prNumber) {
 }
 
 function analyzeReviewWorkflow(reviews, requestedReviewers) {
-  // If no reviewers requested and no reviews, it needs review
   if (requestedReviewers.length === 0 && (!reviews || reviews.length === 0)) {
     return {
       status: 'needs_review',
@@ -406,7 +454,6 @@ function analyzeReviewWorkflow(reviews, requestedReviewers) {
     };
   }
 
-  // Get latest review per user
   const latestReviewsByUser = {};
   reviews.forEach(review => {
     const user = review.user.login;
@@ -434,7 +481,6 @@ function analyzeReviewWorkflow(reviews, requestedReviewers) {
     }
   });
 
-  // Check if all requested reviewers have reviewed
   const requestedReviewerLogins = requestedReviewers.map(r => r.login);
   const reviewersWhoHaventReviewed = requestedReviewerLogins.filter(
     login => !Object.keys(latestReviewsByUser).includes(login)
@@ -477,10 +523,8 @@ function updateTrayIcon(prCount) {
   const settings = store.get('settings');
   const lastCount = settings.lastPrCount || 0;
   
-  // Update tray tooltip with PR count
-  tray.setToolTip(`PR MenuBar - ${prCount} open PRs`);
+  tray.setToolTip(`PR MenuBar v${app.getVersion()} - ${prCount} open PRs`);
   
-  // Show notification if PR count increased
   if (prCount > lastCount && lastCount > 0) {
     const newPRs = prCount - lastCount;
     const iconPath = path.join(__dirname, 'assets', 'icon.png');
@@ -493,7 +537,6 @@ function updateTrayIcon(prCount) {
     }).show();
   }
   
-  // Update stored count
   settings.lastPrCount = prCount;
   store.set('settings', settings);
 }
@@ -504,7 +547,6 @@ async function pollPRs() {
     const prs = await fetchPRs();
     updateTrayIcon(prs.length);
     
-    // Send PR data to renderer process
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('prs-updated', prs);
     }
@@ -516,10 +558,7 @@ async function pollPRs() {
 }
 
 function startPolling() {
-  // Initial poll
   pollPRs();
-  
-  // Set up interval
   pollInterval = setInterval(pollPRs, POLL_INTERVAL);
 }
 
@@ -535,13 +574,12 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   startPolling();
+  setupAutoUpdater();
   
   app.dock.hide();
 });
 
 app.on('window-all-closed', () => {
-  // Don't quit the app when all windows are closed
-  // The app should stay running in the menu bar
   console.log('All windows closed, but keeping app alive');
 });
 
@@ -556,7 +594,6 @@ app.on('before-quit', () => {
   stopPolling();
 });
 
-// Handle any uncaught exceptions
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
 });
@@ -565,7 +602,6 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-// IPC handlers
 const { ipcMain } = require('electron');
 
 ipcMain.handle('get-settings', () => {
@@ -574,7 +610,6 @@ ipcMain.handle('get-settings', () => {
 
 ipcMain.handle('save-settings', (event, settings) => {
   store.set('settings', settings);
-  // Restart polling with new settings
   stopPolling();
   startPolling();
   return true;
@@ -597,4 +632,4 @@ ipcMain.handle('open-settings', () => {
     console.error('Error opening settings:', error);
     return false;
   }
-}); 
+});

@@ -9,7 +9,9 @@
     "build": "electron-builder",
     "build:mac": "electron-builder --mac",
     "build:mac-universal": "electron-builder --mac --universal",
-    "dist": "npm run build",
+    "dist": "electron-builder --publish=never",
+    "release": "electron-builder --publish=always",
+    "pack": "electron-builder --dir",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -20,11 +22,11 @@
     "notifications",
     "macos"
   ],
-  "author": "Your Name",
+  "author": "Elliot",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/pr-menubar-app.git"
+    "url": "https://github.com/Elliot-putt/pr-menubar-app.git"
   },
   "devDependencies": {
     "electron": "^28.0.0",
@@ -64,17 +66,11 @@
       "target": [
         {
           "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
+          "arch": ["x64", "arm64"]
         },
         {
           "target": "zip",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
+          "arch": ["x64", "arm64"]
         }
       ],
       "hardenedRuntime": true,
@@ -104,7 +100,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "yourusername",
+      "owner": "Elliot-putt",
       "repo": "pr-menubar-app"
     }
   }
